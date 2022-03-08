@@ -1,11 +1,14 @@
 from ast import keyword
 import datetime
+from hashlib import new
+from lib2to3.pgen2 import grammar
 from mimetypes import init
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import timedelta
 from tkinter import *
+from pyparsing import col
 import requests
 
 # Calcule le temps d'un cours
@@ -128,6 +131,11 @@ class Rule:
             s += str(sym) + " "
         return s
 
+keys = [
+	"METHOD", "PRODID", "VERSION", "CALSCALE", "DTSTAMP", "DTSTART", "DTEND", "SUMMARY", 
+    "LOCATION", "DESCRIPTION", "UID", "CREATED", "LAST-MODIFIED", "SEQUENCE"
+]
+
 
 CALENDAR = NonTerminal("CALENDAR")
 INFOS = NonTerminal("INFOS")
@@ -135,15 +143,31 @@ EVENT = NonTerminal("EVENT")
 INFODOC = NonTerminal("INFODOC")
 INFO = NonTerminal("INFO")
 
-start = Terminal("BEGIN:VCALENDAR")
-end = Terminal("END:VCALENDAR")
+startCal = Terminal("BEGIN:VCALENDAR")
+endCal = Terminal("END:VCALENDAR")
 
 startEvent = Terminal("BEGIN:VEVENT")
 endEvent = Terminal("END:VEVENT")
 
-data = Terminal("")
+key = Terminal("key")
+colon = Terminal(":")
+data = Terminal("data")
 
+newline = Terminal("\n")
 
+grammar = [
+    Rule(CALENDAR, [startCal, newline, INFOS, newline, endCal]),
+    Rule(INFOS, [EVENT]),
+    Rule(INFOS, [INFODOC]),
+    
+    Rule(EVENT, [startEvent, INFO, endEvent, EVENT]),
+    Rule(EVENT, [startEvent, INFO, endEvent]),
+    
+    Rule(INFODOC, [INFO, INFO]),
+    Rule(INFODOC, [INFO]),
+    
+    Rule(INFO, [newline, key, colon, data, newline])
+]
 
 
 
