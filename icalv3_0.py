@@ -1,24 +1,21 @@
-from __future__ import print_function
 from asyncio.windows_events import NULL
-from importlib.resources import contents
-from tabnanny import check
 import pandas as pd
 import requests
 from Classes import *
+import datetime
+
 
 
 def init():
-    pass
-
-
-def main():
-
-    # On ouvre le fichier excel
-    labels = pd.read_excel('./DataAnalyse.xlsx')
-
+    global url
+    global labels
+    global trigger
+    global keywords
+    
     # On recupere les calendriers avec l'URL
     url = requests.get("https://ade6-usmb-ro.grenet.fr/jsp/custom/modules/plannings/direct_cal.jsp?data=1b9e1ac2a1720dfd6bd1d42ad86c77f9c55ef35a53135e0070a97be8b09957efa9a0e9cb08b4730b&resources=4586&projectId=3&calType=ical&lastDate=2040-08-14").text
-
+    # On ouvre le fichier excel
+    labels = pd.read_excel('./DataAnalyse.xlsx')
     trigger = {
         'startCalendar': 'BEGIN:VCALENDAR',
         'endCalendar': 'END:VCALENDAR',
@@ -31,6 +28,7 @@ def main():
                 'LOCATION', 'DESCRIPTION', 'UID', 'CREATED', 'LAST-MODIFIED',
                 'SEQUENCE', 'END']
 
+def create_Calendar():
     newline = ["\n"]
     separator = [":"]
     lexicons = []
@@ -59,8 +57,9 @@ def main():
     for x in lexicons:
         x[1] = x[1].replace("\r", '')
         x[1] = x[1].replace("\n", '')
-
-    c = Calendar(lexicons[1][1], lexicons[2][1],
+        
+    global cal
+    cal = Calendar(lexicons[1][1], lexicons[2][1],
                  lexicons[3][1], lexicons[4][1])
 
     lexicons.pop(4)
@@ -71,7 +70,6 @@ def main():
 
     events = []
     for i in lexicons:
-        print(i)
         if i[0] == trigger['startEvent']:
             e = Event()
         elif e != NULL:
@@ -101,9 +99,26 @@ def main():
                     e.sequence = i[1]
                 case 'END':
                     events.append(e)
-    c.events = events
+    cal.events = events
 
+def create_excel(cal):
+    for e in cal.events:
+        print(lesson_time(e))
+
+def lesson_time(e):
+    print(e.dtstart)
+    # startstr = e.dtstart
+    # start = datetime.datetime.strptime(startstr, '%Y-%m-%d %H:%M:%S.%f').dt
+    # endstr = e.dtend
+    # end = datetime.datetime.strptime(endstr, '%Y-%m-%d %H:%M:%S.%f').dt
+    # time = end - start
+    # return time.total_seconds() / 3600
 
 if __name__ == '__main__':
     init()
-    main()
+    create_Calendar()
+    create_excel(cal)
+    
+    
+    
+    
