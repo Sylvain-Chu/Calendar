@@ -1,15 +1,7 @@
-from ast import keyword
-import datetime
-from hashlib import new
-from lib2to3.pgen2 import grammar
 from mimetypes import init
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from datetime import timedelta
-from tkinter import *
-from pyparsing import col
 import requests
+from Classes import *
 
 # Calcule le temps d'un cours
 
@@ -28,8 +20,11 @@ def init():
 
 
 def main():
-    keywords = ['BEGIN', 'END', 'DTSTART', 'DTEND',
-                'SUMMARY',  'LOCATION', 'DESCRIPTION']
+    keywords = ['METHOD', 'PRIDID', 'VERSION', 'CALSCALE',
+                'DTSTAMP',  'DTSTART', 'DTEND',
+                'SUMMARY',  'LOCATION', 'DESCRIPTION',
+                'UID',  'CREATED', 'LAST-MODIFIER ',
+                'SEQUECE',  'METHOD', 'PRODID', 'VERSION']
     lexicons = []
 
     # On ouvre le fichier excel
@@ -41,98 +36,30 @@ def main():
     # On ouvre le fichier .ics
     # file = open('./ADECal.ics', 'r', encoding='utf-8')
 
-    i = 0
-    for i in range(0, 500):
+    # i = 0
+    # while i < len(url):
+    for i in range(0, 34):
         c = url[i]
+        # print(c)
 
         keywordFound = False
         theKeyWord = ""
         for keyword in keywords:
+            print(url[i:i+len(keyword)])
             if url[i:i+len(keyword)] == keyword:
                 lexicons.append(keyword)
                 theKeyword = keyword
                 keywordFound = True
             if keywordFound:
                 i += len(theKeyWord)
+            
+            # else:
+            #     if c == ':':
+            #         pass
 
-
-class Tree:
-    """ un symbole (générique) et un ensemble d'enfants """
-
-    def __init__(self, symbol):
-        self.symbol = symbol
-        self.nodes = []
-    """ affichage indenté """
-
-    def __str__(self):
-        return self.__strIndent__(0)
-
-    """ ajouter un enfant (raccourci) """
-
-    def add(self, symbol):
-        self.nodes.append(Tree(symbol))
-
-    """ sélection d'un noeud en fonction du symbole (récursivement) """
-
-    def select(self, symbol):
-        if self.symbol == symbol:
-            return self
-        for node in self.nodes:
-            sub = node.select(symbol)
-            if sub != None:
-                return sub
-        return None
-
-    """ liste de tous les noeuds en parcours récursif (parent d'abord) """
-
-    def asList(self):
-        if len(self.nodes) == 0:
-            return [self]
-        else:
-            list = [self]
-            for node in self.nodes:
-                list.extend(node.asList())
-            return list
-
-    """ noeud suivant d'un noeud dans le parcours récursif. Fonction bourrine à optimiser ! """
-
-    def nextNode(self, node):
-        list = self.asList()
-        for i in range(len(list)):
-            if list[i] == node and i < len(list)-1:
-                return list[i+1]
-        return None
-
-
-class Symbol:
-    def __init__(self, word):
-        self.word = word
-
-    def __str__(self):
-        return self.word
-
-
-class Terminal(Symbol):
-    pass
-
-
-class NonTerminal(Symbol):
-    pass
-
-
-class Rule:
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
-
-    def __str__(self):
-        s = str(self.left) + " -> "
-        for sym in self.right:
-            s += str(sym) + " "
-        return s
 
 keys = [
-	"METHOD", "PRODID", "VERSION", "CALSCALE", "DTSTAMP", "DTSTART", "DTEND", "SUMMARY", 
+    "METHOD", "PRODID", "VERSION", "CALSCALE", "DTSTAMP", "DTSTART", "DTEND", "SUMMARY",
     "LOCATION", "DESCRIPTION", "UID", "CREATED", "LAST-MODIFIED", "SEQUENCE"
 ]
 
@@ -142,6 +69,7 @@ INFOS = NonTerminal("INFOS")
 EVENT = NonTerminal("EVENT")
 INFODOC = NonTerminal("INFODOC")
 INFO = NonTerminal("INFO")
+NEXT = NonTerminal("NEXT")
 
 startCal = Terminal("BEGIN:VCALENDAR")
 endCal = Terminal("END:VCALENDAR")
@@ -155,20 +83,26 @@ data = Terminal("data")
 
 newline = Terminal("\n")
 
+epsilon = Terminal("ε")
+
 grammar = [
     Rule(CALENDAR, [startCal, newline, INFOS, newline, endCal]),
+
     Rule(INFOS, [EVENT]),
     Rule(INFOS, [INFODOC]),
-    
-    Rule(EVENT, [startEvent, INFO, endEvent, EVENT]),
-    Rule(EVENT, [startEvent, INFO, endEvent]),
-    
-    Rule(INFODOC, [INFO, INFO]),
-    Rule(INFODOC, [INFO]),
-    
+
+    Rule(EVENT, [startEvent, INFO, endEvent, NEXT]),
+    Rule(EVENT, [epsilon]),
+
+    Rule(INFODOC, [INFO, NEXT]),
+    Rule(INFODOC, [epsilon]),
+
+    Rule(NEXT, [INFO, NEXT]),
+    Rule(NEXT, [EVENT, NEXT]),
+    Rule(NEXT, [epsilon]),
+
     Rule(INFO, [newline, key, colon, data, newline])
 ]
-
 
 
 if __name__ == '__main__':
