@@ -1,5 +1,5 @@
 class Calendar:
-	def __init__(self, event):
-		self.event = event
+	def __init__(self, events):
+		self.event = events
 
 	

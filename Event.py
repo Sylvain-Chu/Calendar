@@ -2,8 +2,8 @@ from datetime import date
 
 
 class Event:
-    def __init__(self, dtstart, dtend, sumary, location, description, uid, created, lastmodified, sequence):
-        self.dtstamp = date.today()
+    def __init__(self, dtstamp, dtstart, dtend, sumary, location, description, uid, created, lastmodified, sequence):
+        self.dtstamp = dtstamp
         self.dtstart = dtstart
         self.dtend = dtend
         self.sumary = sumary
@@ -15,7 +15,4 @@ class Event:
         self.sequence = sequence
 
     def __init__(self):
-        self.dtstamp = date.today()
-
-    def __str__():
-        return ''
+        self.description = 'e'
