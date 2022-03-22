@@ -3,7 +3,7 @@ import requests
 from Classes import *
 import datetime
 import csv
-from pandas import DataFrame
+import xlsxwriter
 
 
 def init():
@@ -11,14 +11,12 @@ def init():
     global labels
     global trigger
     global keywords
-    global wb
-    global ws
+    global workbook
 
     # On recupere les calendriers avec l'URL
     url = requests.get("https://ade6-usmb-ro.grenet.fr/jsp/custom/modules/plannings/direct_cal.jsp?data=1b9e1ac2a1720dfd6bd1d42ad86c77f9c55ef35a53135e0070a97be8b09957efa9a0e9cb08b4730b&resources=4586&projectId=3&calType=ical&lastDate=2040-08-14").text
     # On ouvre le fichier excel
-    f = open('DataAnalyse.xlsx')
-    myReader = csv.reader(f)
+    workbook = xlsxwriter.Workbook('DataAnalyse.xlsx')
 
     trigger = {
         'startCalendar': 'BEGIN:VCALENDAR',
@@ -78,18 +76,20 @@ def create_Calendar():
     events = []
     for i in lexicons:
         if i[0] == trigger['startEvent']:
-            e = Event()        
+            e = Event()
         elif e != NULL:
             match i[0]:
                 case 'DTSTAMP':
                     e.dtstamp = i[1]
                 case 'DTSTART':
-                    e.dtstart = datetime.datetime.strptime(i[1], '%Y%m%dT%H%M%SZ')
+                    e.dtstart = datetime.datetime.strptime(
+                        i[1], '%Y%m%dT%H%M%SZ')
                 case 'END':
                     if(i[1] == 'VEVENT'):
                         events.append(e)
                     else:
-                        e.dtend = datetime.datetime.strptime(i[1], '%Y%m%dT%H%M%SZ')
+                        e.dtend = datetime.datetime.strptime(
+                            i[1], '%Y%m%dT%H%M%SZ')
                 case 'SUMMARY':
                     e.sumary = i[1]
                 case 'LOCATION':
@@ -112,35 +112,49 @@ def create_Calendar():
 
 
 def create_excel(cal):
-    
-        # dataF = DataFrame(C, columns= ['Matière', 'Salle', 'Description', 'Date de début', 'Date de fin', 'Durée'])
 
-        C = {
-            'Matière'       : [],
-            'Salle'         : [],
-            'Description'   : [],
-            'Date de début' : [],
-            'Date de fin'   : [],
-            'Durée'         : []
-        }
+    columns = ['Matière', 'Salle', 'Description',
+               'Date de début', 'Date de fin', 'Durée']
+
+
+    worksheet = workbook.add_worksheet()
+
+    row = 0
+    column = 0
+
+    for col in columns:
+        worksheet.write(row, column, col)
+        column += 1
         
-        for e in cal.events:
-            C['Matière'].append(e.sumary)
-            C['Salle'].append(e.location)
-            C['Description'].append(e.description)
-            C['Date de début'].append(e.dtstart)
-            C['Date de fin'].append(e.dtend)
-            C['Durée'].append(lesson_time(e))
-            # rt_csv = df.to_csv ('DataAnalyse.csv', index = None, header=True, encoding='utf-8', sep=';')
+    row += 1   
+    column = 0
+
+    formatdate = workbook.add_format({'num_format': 'dd/mm/yy'})
+    formatheure = workbook.add_format({'num_format': 'hh:mm:ss'})
+
+
+    for e in cal.events:
+        column = 0
         
-        for e in C:
-            print(e)
+        worksheet.write(row, column, e.sumary)
+        column += 1
+        worksheet.write(row, column, e.location)
+        column += 1
+        worksheet.write(row, column, e.description)
+        column += 1
+        worksheet.write(row, column, e.dtstart, formatdate)
+        column += 1
+        worksheet.write(row, column, e.dtend, formatdate)
+        column += 1
+        worksheet.write(row, column, lesson_time(e), formatheure)
+        column += 1
+        row += 1
 
-
+    workbook.close()
 
 
 def lesson_time(e):
-    time = e.dtend- e.dtstart 
+    time = e.dtend - e.dtstart
     return time
 
 
