@@ -1,9 +1,9 @@
 from asyncio.windows_events import NULL
-import pandas as pd
 import requests
 from Classes import *
 import datetime
-
+import csv
+from pandas import DataFrame
 
 
 def init():
@@ -11,11 +11,15 @@ def init():
     global labels
     global trigger
     global keywords
-    
+    global wb
+    global ws
+
     # On recupere les calendriers avec l'URL
     url = requests.get("https://ade6-usmb-ro.grenet.fr/jsp/custom/modules/plannings/direct_cal.jsp?data=1b9e1ac2a1720dfd6bd1d42ad86c77f9c55ef35a53135e0070a97be8b09957efa9a0e9cb08b4730b&resources=4586&projectId=3&calType=ical&lastDate=2040-08-14").text
     # On ouvre le fichier excel
-    labels = pd.read_excel('./DataAnalyse.xlsx')
+    f = open('DataAnalyse.xlsx')
+    myReader = csv.reader(f)
+
     trigger = {
         'startCalendar': 'BEGIN:VCALENDAR',
         'endCalendar': 'END:VCALENDAR',
@@ -24,9 +28,10 @@ def init():
     }
 
     keywords = ['BEGIN', 'METHOD', 'PRODID', 'VERSION',
-                'CALSCALE', 'DTSTAMP', 'DTSTART', 'DTEND', 'SUMMARY',
+                'CALSCALE', 'DTENDDTSTAMP', 'DTSTART', 'DTSTAMP', 'SUMMARY',
                 'LOCATION', 'DESCRIPTION', 'UID', 'CREATED', 'LAST-MODIFIED',
                 'SEQUENCE', 'END']
+
 
 def create_Calendar():
     newline = ["\n"]
@@ -42,6 +47,7 @@ def create_Calendar():
             if url[i:i+len(keyword)] == keyword:
                 theKeyword = keyword
                 keywordFound = True
+                # print(url[i:i+len(keyword)])
 
             if keywordFound:
                 i += len(theKeyWord)
@@ -57,29 +63,33 @@ def create_Calendar():
     for x in lexicons:
         x[1] = x[1].replace("\r", '')
         x[1] = x[1].replace("\n", '')
-        
+
     global cal
     cal = Calendar(lexicons[1][1], lexicons[2][1],
-                 lexicons[3][1], lexicons[4][1])
+                   lexicons[3][1], lexicons[4][1])
 
     lexicons.pop(4)
     lexicons.pop(3)
     lexicons.pop(2)
     lexicons.pop(1)
     lexicons.pop(0)
+    lexicons.pop()
 
     events = []
     for i in lexicons:
         if i[0] == trigger['startEvent']:
-            e = Event()
+            e = Event()        
         elif e != NULL:
             match i[0]:
                 case 'DTSTAMP':
                     e.dtstamp = i[1]
                 case 'DTSTART':
-                    e.dtstart = i[1]
-                case 'DTEND':
-                    e.dtend = i[1]
+                    e.dtstart = datetime.datetime.strptime(i[1], '%Y%m%dT%H%M%SZ')
+                case 'END':
+                    if(i[1] == 'VEVENT'):
+                        events.append(e)
+                    else:
+                        e.dtend = datetime.datetime.strptime(i[1], '%Y%m%dT%H%M%SZ')
                 case 'SUMMARY':
                     e.sumary = i[1]
                 case 'LOCATION':
@@ -97,28 +107,44 @@ def create_Calendar():
                     e.lastmodified = i[1]
                 case 'SEQUENCE':
                     e.sequence = i[1]
-                case 'END':
-                    events.append(e)
+
     cal.events = events
 
+
 def create_excel(cal):
-    for e in cal.events:
-        print(lesson_time(e))
+    
+        # dataF = DataFrame(C, columns= ['Matière', 'Salle', 'Description', 'Date de début', 'Date de fin', 'Durée'])
+
+        C = {
+            'Matière'       : [],
+            'Salle'         : [],
+            'Description'   : [],
+            'Date de début' : [],
+            'Date de fin'   : [],
+            'Durée'         : []
+        }
+        
+        for e in cal.events:
+            C['Matière'].append(e.sumary)
+            C['Salle'].append(e.location)
+            C['Description'].append(e.description)
+            C['Date de début'].append(e.dtstart)
+            C['Date de fin'].append(e.dtend)
+            C['Durée'].append(lesson_time(e))
+            # rt_csv = df.to_csv ('DataAnalyse.csv', index = None, header=True, encoding='utf-8', sep=';')
+        
+        for e in C:
+            print(e)
+
+
+
 
 def lesson_time(e):
-    print(e.dtstart)
-    # startstr = e.dtstart
-    # start = datetime.datetime.strptime(startstr, '%Y-%m-%d %H:%M:%S.%f').dt
-    # endstr = e.dtend
-    # end = datetime.datetime.strptime(endstr, '%Y-%m-%d %H:%M:%S.%f').dt
-    # time = end - start
-    # return time.total_seconds() / 3600
+    time = e.dtend- e.dtstart 
+    return time
+
 
 if __name__ == '__main__':
     init()
     create_Calendar()
     create_excel(cal)
-    
-    
-    
-    
